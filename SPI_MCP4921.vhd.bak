@@ -1,0 +1,64 @@
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity SPI_MCP4921 is 
+port(		clki: 	in std_logic ; 
+			Reset: 	in std_logic ;
+			Enable: 	in std_logic ;
+			DataIn: 	in std_logic_vector(7 downto 0)
+			CS: 		out std_logic;
+			MOSI: 	out std_logic;
+			clkOut: 	out std_logic
+		
+);
+
+end SPI_MCP4921;
+
+architecture Arq1 of SPI_MCP4921 is
+signal clkOut_A: std_logic;
+signal Config: std_logic_vector(3 downto 0) := "0011";   -- Bits de configuración (Primeros bits a enviar) 
+signal clk_count: integer range 0 to 5;
+signal C: integer range 0 to 15 :=0;
+signal MOSI_A: std_logic;
+type State is (Init, TransmitData, Stop);
+begin
+process(clki)
+begin 
+		if rising_edge(clki) then 
+			if clk_count = 5 then 						
+				clkOut_A <= not clkOut_A ; 	-- Invierte la señal
+			else 
+				clk_count <= 0;					-- Reinicia clk_count
+			end if;
+		end if;
+end process;
+
+process(clkOut)
+begin
+		if rising_edge(clkOut_A) then 
+			case State is 
+				when Init => 
+					MOSI_A <= Config(C);			-- 
+					if C = 3 then 
+						State <= TransmitData ;	-- Cambia de estado
+					   C <= 0; 						-- Reinicia Contador
+					else 
+						C <= C +1;					-- Incrementa contador
+					end if;
+				when TransmitData => 
+					MOSI_A <= DataIn(C); 		-- transmite los datos en dataIn
+					if C = 7 then 
+						State <= Stop ;			-- Cambia de estado
+					   C <= 0; 						-- Reinicia Contador
+					else 
+						C <= C +1;					-- Incrementa contador
+					end if;
+				when Stop => 
+					CS_A <= '1'; 					-- Coloco CS en alto
+				when others => null;				
+			end case;
+		end if;
+end process;
+
+
+end Arq1;
